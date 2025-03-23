@@ -1,9 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:file_picker/file_picker.dart'; // optional if you still use it
+import 'package:path/path.dart' as p;
+import 'package:ttsapp/screens/settings_screen.dart';
+
 import '../services/document_reader_service.dart';
 import '../services/text_to_speech_service.dart';
+import 'saved_files_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
@@ -44,9 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
       await _textToSpeechService.updateSpeechRate(_speechRate);
       await _textToSpeechService.speak(_extractedText);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No text to speak.")),
-      );
+      _showSnackBar("No text to speak.");
     }
   }
 
@@ -65,12 +66,22 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {});
   }
 
-  /// Provide a bottom sheet to name the file & choose format
+  Future<void> _startNewDocument() async {
+    await _textToSpeechService.stop();
+    setState(() {
+      _extractedText = "";
+      _currentWordIndex = -1;
+    });
+    await _pickAndReadDocument();
+  }
+
+  void _showSnackBar(String msg) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
   Future<void> _openSaveOptions() async {
     if (_extractedText.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("No text available to read aloud.")),
-      );
+      _showSnackBar("No text available to read aloud.");
       return;
     }
 
@@ -78,7 +89,7 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       builder: (context) {
         String fileName = "audio_file";
-        String format = "wav"; // or mp3
+        String format = "wav";
         return StatefulBuilder(
           builder: (context, bottomSheetSetState) {
             return Padding(
@@ -89,24 +100,21 @@ class _HomeScreenState extends State<HomeScreen> {
                   Text("Save Audio Options",
                       style: Theme.of(context).textTheme.titleMedium),
                   TextField(
-                    onChanged: (value) {
-                      bottomSheetSetState(() => fileName = value.trim());
-                    },
+                    onChanged: (value) =>
+                        bottomSheetSetState(() => fileName = value.trim()),
                     decoration: const InputDecoration(
                       labelText: "File Name",
                       hintText: "Enter file name",
                     ),
                   ),
                   const SizedBox(height: 10),
-                  // Format selection
                   Row(
                     children: [
                       const Text("Choose Format: "),
                       DropdownButton<String>(
                         value: format,
-                        onChanged: (val) {
-                          bottomSheetSetState(() => format = val!);
-                        },
+                        onChanged: (val) =>
+                            bottomSheetSetState(() => format = val!),
                         items: const [
                           DropdownMenuItem(value: "wav", child: Text("WAV")),
                           DropdownMenuItem(value: "mp3", child: Text("MP3")),
@@ -117,9 +125,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   const SizedBox(height: 10),
                   ElevatedButton(
                     onPressed: () async {
-                      Navigator.pop(context); // close bottom sheet
+                      Navigator.pop(context);
                       if (fileName.isEmpty) return;
-
                       await _readAloudAndSave(fileName, format);
                     },
                     child: const Text("Save & Speak"),
@@ -133,35 +140,26 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  /// 1) Synthesize to a "public" external path, e.g. /storage/emulated/0/Download/...
-  /// 2) Then speak (sequentially)
   Future<void> _readAloudAndSave(String fileName, String format) async {
-  await _textToSpeechService.updatePitch(_pitch);
-  await _textToSpeechService.updateSpeechRate(_speechRate);
+    await _textToSpeechService.updatePitch(_pitch);
+    await _textToSpeechService.updateSpeechRate(_speechRate);
+    await _textToSpeechService.stop();
 
-  // Stop if TTS is running
-  await _textToSpeechService.stop();
-
-  final savedPath = await _textToSpeechService.synthesizeAndRelocate(
-    _extractedText,
-    fileName,
-    format: format,
-  );
-
-  await _textToSpeechService.speak(_extractedText);
-
-  if (savedPath != null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Audio saved at $savedPath")),
+    final savedPath = await _textToSpeechService.synthesizeAndRelocate(
+      _extractedText,
+      fileName,
+      format: format,
     );
-    _showOptionToShare(savedPath);
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Failed to save audio file.")),
-    );
+
+    await _textToSpeechService.speak(_extractedText);
+
+    if (savedPath != null) {
+      _showSnackBar("Audio saved at $savedPath");
+      _showOptionToShare(savedPath);
+    } else {
+      _showSnackBar("Failed to save audio file.");
+    }
   }
-}
-
 
   void _showOptionToShare(String filePath) {
     showDialog(
@@ -201,6 +199,70 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         title: const Text("Document Reader & TTS"),
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            tooltip: "New Document",
+            onPressed: _startNewDocument,
+          )
+        ],
+      ),
+      drawer: Drawer(
+        width: MediaQuery.of(context).size.width * 0.75,
+        backgroundColor: Colors.grey[100],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.menu_book, size: 28, color: Colors.white),
+                  SizedBox(width: 12),
+                  Text(
+                    "TTS App Menu",
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            ListTile(
+              leading: const Icon(Icons.folder_outlined),
+              title: const Text("Saved Files"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SavedFilesScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text("Settings"),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+              },
+            ),
+            const Divider(),
+          ],
+        ),
       ),
       body: SafeArea(
         child: Column(
@@ -238,10 +300,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               divisions: 15,
                               label: _pitch.toStringAsFixed(2),
                               onChanged: (val) => setState(() => _pitch = val),
-                              onChangeEnd: (val) async {
-                                await _textToSpeechService
-                                    .updatePitchOnTheFly(val);
-                              },
+                              onChangeEnd: (val) =>
+                                  _textToSpeechService.updatePitchOnTheFly(val),
                             ),
                           ),
                         ],
@@ -258,10 +318,8 @@ class _HomeScreenState extends State<HomeScreen> {
                               label: _speechRate.toStringAsFixed(2),
                               onChanged: (val) =>
                                   setState(() => _speechRate = val),
-                              onChangeEnd: (val) async {
-                                await _textToSpeechService
-                                    .updateRateOnTheFly(val);
-                              },
+                              onChangeEnd: (val) =>
+                                  _textToSpeechService.updateRateOnTheFly(val),
                             ),
                           ),
                         ],
@@ -279,10 +337,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: _extractedText.isEmpty
-                    ? const Center(
-                        child: Text("No text extracted yet.",
-                            style: TextStyle(fontSize: 16)),
-                      )
+                    ? const Center(child: Text("No text extracted yet."))
                     : SingleChildScrollView(
                         child: RichText(
                           text: TextSpan(
@@ -308,7 +363,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             if (_extractedText.isNotEmpty)
-              Container(
+              Padding(
                 padding: const EdgeInsets.all(10),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,

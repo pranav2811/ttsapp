@@ -43,6 +43,7 @@ dependencies:
   xml: ^6.5.0
   path_provider: ^2.1.5
   share_plus: ^10.1.4
+  open_file: ^3.5.10
 
 dev_dependencies:
   flutter_test:
