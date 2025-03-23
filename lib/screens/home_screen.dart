@@ -209,59 +209,78 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       drawer: Drawer(
         width: MediaQuery.of(context).size.width * 0.75,
-        backgroundColor: Colors.grey[100],
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [Color(0xFF2196F3), Color(0xFF64B5F6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              child: Row(
-                children: const [
-                  Icon(Icons.menu_book, size: 28, color: Colors.white),
-                  SizedBox(width: 12),
-                  Text(
-                    "TTS App Menu",
-                    style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+        child: Builder(
+          builder: (context) {
+            final theme = Theme.of(context);
+            final isDark = theme.brightness == Brightness.dark;
+
+            return Container(
+              color: theme.colorScheme.surface,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.fromLTRB(16, 40, 16, 20),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDark
+                            ? [Colors.grey[850]!, Colors.grey[800]!]
+                            : [Colors.blue, Colors.lightBlueAccent],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.menu_book,
+                            size: 28, color: theme.colorScheme.onPrimary),
+                        const SizedBox(width: 12),
+                        Text(
+                          "TTS App Menu",
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.onPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
+                  const SizedBox(height: 10),
+                  ListTile(
+                    leading: Icon(Icons.folder_outlined,
+                        color: theme.colorScheme.onSurface),
+                    title: Text("Saved Files",
+                        style: TextStyle(color: theme.colorScheme.onSurface)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SavedFilesScreen()),
+                      );
+                    },
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.settings,
+                        color: theme.colorScheme.onSurface),
+                    title: Text("Settings",
+                        style: TextStyle(color: theme.colorScheme.onSurface)),
+                    onTap: () {
+                      Navigator.pop(context);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen()),
+                      );
+                    },
+                  ),
+                  const Divider(),
                 ],
               ),
-            ),
-            const SizedBox(height: 10),
-            ListTile(
-              leading: const Icon(Icons.folder_outlined),
-              title: const Text("Saved Files"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SavedFilesScreen()),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.settings),
-              title: const Text("Settings"),
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                );
-              },
-            ),
-            const Divider(),
-          ],
+            );
+          },
         ),
       ),
       body: SafeArea(
@@ -347,13 +366,16 @@ class _HomeScreenState extends State<HomeScreen> {
                               return TextSpan(
                                 text: "$word ",
                                 style: TextStyle(
-                                  color: idx == _currentWordIndex
-                                      ? Colors.blue
-                                      : Colors.black,
+                                  fontSize: 16,
                                   fontWeight: idx == _currentWordIndex
                                       ? FontWeight.bold
                                       : FontWeight.normal,
-                                  fontSize: 16,
+                                  color: idx == _currentWordIndex
+                                      ? Colors.blue
+                                      : Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium
+                                          ?.color, // ✅ auto adapt
                                 ),
                               );
                             }).toList(),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../main.dart'; // to access themeNotifier
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -10,10 +11,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   double _defaultPitch = 1.0;
   double _defaultRate = 0.6;
-  bool _isDarkMode = false;
 
   @override
   Widget build(BuildContext context) {
+    bool isDarkMode = themeNotifier.value == ThemeMode.dark;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Settings")),
       body: ListView(
@@ -42,8 +44,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const SizedBox(height: 20),
           SwitchListTile(
             title: const Text("Dark Mode"),
-            value: _isDarkMode,
-            onChanged: (val) => setState(() => _isDarkMode = val),
+            value: isDarkMode,
+            onChanged: (enabled) {
+              setState(() {
+                themeNotifier.value =
+                    enabled ? ThemeMode.dark : ThemeMode.light;
+              });
+            },
           ),
           const SizedBox(height: 20),
           ElevatedButton.icon(
@@ -60,7 +67,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           const Text("About",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          const Text("TTS App v1.0.0\n© 2025 YourName"),
+          const Text("TTS App v1.0.0\n© 2025 Prnav&Raj"),
         ],
       ),
     );
