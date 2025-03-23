@@ -1,0 +1,2 @@
+C:/Users/DELL/Desktop/apps/apps/ttsapp/android/app/.cxx/Debug/6t1u5z6o/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/DELL/Desktop/apps/apps/ttsapp/android/app/.cxx/Debug/6t1u5z6o/x86_64/CMakeFiles/rebuild_cache.dir
